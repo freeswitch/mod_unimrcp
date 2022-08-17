@@ -45,7 +45,7 @@ SWITCH_VERSION_MAJOR=`echo $version|cut -d. -f1`
 SWITCH_VERSION_MINOR=`echo $version|cut -d. -f2`
 SWITCH_VERSION_MICRO=`echo $version|cut -d. -f3`
 
-PKG_CHECK_MODULES([UNIMRCP], [libunimrcp >= 0.0.1],[
+PKG_CHECK_MODULES([UNIMRCP], [unimrcpclient >= 0.0.1],[
   AM_CONDITIONAL([HAVE_UNIMRCP],[true])],[
   AC_MSG_RESULT([no]); AM_CONDITIONAL([HAVE_UNIMRCP],[false])])
 
