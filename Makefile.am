@@ -9,7 +9,7 @@ if HAVE_UNIMRCP
 mod_LTLIBRARIES = mod_unimrcp.la
 mod_unimrcp_la_SOURCES  = mod_unimrcp.c
 mod_unimrcp_la_CFLAGS   = $(AM_CFLAGS) $(FREESWITCH_CFLAGS) $(UNIMRCP_CFLAGS)
-mod_unimrcp_la_LDFLAGS  = -avoid-version -module -no-undefined -shared $(FREESWITCH_LIBS) $(UNIMRCP_LDFLAGS)
+mod_unimrcp_la_LDFLAGS  = -avoid-version -module -no-undefined -shared $(FREESWITCH_LIBS) $(UNIMRCP_LIBS)
 mod_unimrcp_la_LIBADD   = $(LIBS)
 
 else
