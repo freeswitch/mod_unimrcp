@@ -121,6 +121,8 @@ struct mod_unimrcp_globals {
 	int speech_channel_number;
 	/** the available profiles */
 	switch_hash_t *profiles;
+	/** UniMRCP and APT compatible memory pool */
+	apr_pool_t *apr_pool;
 };
 typedef struct mod_unimrcp_globals mod_unimrcp_globals_t;
 
@@ -198,7 +200,7 @@ static mrcp_client_t *mod_unimrcp_client_create(switch_memory_pool_t *mod_pool);
 static int process_rtp_config(mrcp_client_t *client, mpf_rtp_config_t *rtp_config, mpf_rtp_settings_t *rtp_settings, const char *param, const char *val, apr_pool_t *pool);
 static int process_mrcpv1_config(rtsp_client_config_t *config, mrcp_sig_settings_t *sig_settings, const char *param, const char *val, apr_pool_t *pool);
 static int process_mrcpv2_config(mrcp_sofia_client_config_t *config, mrcp_sig_settings_t *sig_settings, const char *param, const char *val, apr_pool_t *pool);
-static int process_profile_config(profile_t *profile, const char *param, const char *val, apr_pool_t *pool);
+static int process_profile_config(profile_t *profile, const char *param, const char *val, switch_memory_pool_t *pool);
 
 /* UniMRCP <--> FreeSWITCH logging bridge */
 static apt_bool_t unimrcp_log(const char *file, int line, const char *obj, apt_log_priority_e priority, const char *format, va_list arg_ptr);
@@ -338,6 +340,8 @@ struct speech_channel {
 	mrcp_channel_t *unimrcp_channel;
 	/** memory pool */
 	switch_memory_pool_t *memory_pool;
+	/** memory pool compatible with apt and unimrcp */
+	apr_pool_t *apr_pool;
 	/** synchronizes channel state */
 	switch_mutex_t *mutex;
 	/** wait on channel states */
@@ -882,10 +886,13 @@ static switch_status_t speech_channel_create(speech_channel_t ** schannel, const
 	schan->application = app;
 	schan->state = SPEECH_CHANNEL_CLOSED;
 	schan->memory_pool = pool;
+	schan->apr_pool = NULL;
 	schan->params = NULL;
 	schan->rate = rate;
 	schan->silence = 0;			/* L16 silence sample */
 	schan->channel_opened = 0;
+
+	apr_pool_create(&schan->apr_pool, NULL);
 
 	if (switch_mutex_init(&schan->mutex, SWITCH_MUTEX_UNNESTED, pool) != SWITCH_STATUS_SUCCESS ||
 		switch_thread_cond_create(&schan->cond, pool) != SWITCH_STATUS_SUCCESS ||
@@ -943,6 +950,10 @@ static switch_status_t speech_channel_destroy(speech_channel_t *schannel)
 		}
 		if (schannel->mutex) {
 			switch_mutex_unlock(schannel->mutex);
+		}
+		if (schannel->apr_pool) {
+			apr_pool_destroy(schannel->apr_pool);
+			schannel->apr_pool = NULL;
 		}
 	}
 
@@ -1141,7 +1152,7 @@ static switch_status_t synth_channel_speak(speech_channel_t *schannel, const cha
 	synth_channel_set_params(schannel, mrcp_message, generic_header, synth_header);
 
 	/* set body (plain text or SSML) */
-	apt_string_assign(&mrcp_message->body, text, schannel->memory_pool);
+	apt_string_assign(&mrcp_message->body, text, schannel->apr_pool); // CHECK - should this be from the mrcp_message->pool instead??
 
 	/* Empty audio queue and send SPEAK to MRCP server */
 	audio_queue_clear(schannel->audio_queue);
@@ -2050,7 +2061,7 @@ static switch_status_t synth_load(switch_loadable_module_interface_t *module_int
 	speech_interface->speech_float_param_tts = synth_speech_float_param_tts;
 
 	/* Create the synthesizer application and link its callbacks to UniMRCP */
-	if ((globals.synth.app = mrcp_application_create(synth_message_handler, (void *) 0, pool)) == NULL) {
+	if ((globals.synth.app = mrcp_application_create(synth_message_handler, (void *) 0, globals.apr_pool)) == NULL) {
 		return SWITCH_STATUS_FALSE;
 	}
 	globals.synth.dispatcher.on_session_update = NULL;
@@ -3788,7 +3799,7 @@ static switch_status_t recog_load(switch_loadable_module_interface_t *module_int
 	asr_interface->asr_float_param = recog_asr_float_param;
 
 	/* Create the recognizer application and link its callbacks */
-	if ((globals.recog.app = mrcp_application_create(recog_message_handler, (void *) 0, pool)) == NULL) {
+	if ((globals.recog.app = mrcp_application_create(recog_message_handler, (void *) 0, globals.apr_pool)) == NULL) {
 		return SWITCH_STATUS_FALSE;
 	}
 	globals.recog.dispatcher.on_session_update = NULL;
@@ -4099,7 +4110,7 @@ static mrcp_client_t *mod_unimrcp_client_create(switch_memory_pool_t *mod_pool)
 	apt_dir_layout_t *dir_layout;
 
 	/* create the client */
-	if ((dir_layout = apt_default_dir_layout_create("../", mod_pool)) == NULL) {
+	if ((dir_layout = apt_default_dir_layout_create("../", globals.apr_pool)) == NULL) {
 		goto done;
 	}
 	client = mrcp_client_create(dir_layout);
@@ -4258,7 +4269,7 @@ static mrcp_client_t *mod_unimrcp_client_create(switch_memory_pool_t *mod_pool)
 						goto done;
 					}
 					switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Loading SPEAK Param %s:%s\n", param_name, param_value);
-					switch_core_hash_insert(mod_profile->default_synth_params, switch_core_strdup(pool, param_name), switch_core_strdup(pool, param_value));
+					switch_core_hash_insert(mod_profile->default_synth_params, switch_core_strdup(mod_pool, param_name), switch_core_strdup(mod_pool, param_value));
 				}
 			}
 
@@ -4281,7 +4292,7 @@ static mrcp_client_t *mod_unimrcp_client_create(switch_memory_pool_t *mod_pool)
 						goto done;
 					}
 					switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Loading RECOGNIZE Param %s:%s\n", param_name, param_value);
-					switch_core_hash_insert(mod_profile->default_recog_params, switch_core_strdup(pool, param_name), switch_core_strdup(pool, param_value));
+					switch_core_hash_insert(mod_profile->default_recog_params, switch_core_strdup(mod_pool, param_name), switch_core_strdup(mod_pool, param_value));
 				}
 			}
 
@@ -4426,6 +4437,9 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_unimrcp_load)
 	globals.speech_channel_number = 0;
 	switch_core_hash_init_nocase(&globals.profiles);
 
+	apr_initialize();
+	apr_pool_create(&globals.apr_pool, NULL);
+
 	/* get MRCP module configuration */
 	mod_unimrcp_do_config();
 	if (zstr(globals.unimrcp_default_synth_profile)) {
@@ -4439,7 +4453,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_unimrcp_load)
 
 	/* link UniMRCP logs to FreeSWITCH */
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "UniMRCP log level = %s\n", globals.unimrcp_log_level);
-	if (apt_log_instance_create(APT_LOG_OUTPUT_NONE, str_to_log_level(globals.unimrcp_log_level), pool) == FALSE) {
+	if (apt_log_instance_create(APT_LOG_OUTPUT_NONE, str_to_log_level(globals.unimrcp_log_level), globals.apr_pool) == FALSE) {
 		/* already created */
 		apt_log_priority_set(str_to_log_level(globals.unimrcp_log_level));
 	}
@@ -4489,6 +4503,12 @@ SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_unimrcp_shutdown)
 
 	switch_core_hash_destroy(&globals.profiles);
 
+	if (globals.apr_pool) {
+		apr_pool_destroy(globals.apr_pool);
+		globals.apr_pool = NULL;
+	}
+
+	apr_terminate();
 	return SWITCH_STATUS_SUCCESS;
 }
 
