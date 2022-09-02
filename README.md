@@ -1,3 +1,4 @@
+# MRCP Module For FreeSWITCH
 
 ## How to build
 
@@ -96,3 +97,6 @@ $ sudo make install
 $ cd ..
 ```
 
+## Docs
+
+https://freeswitch.org/confluence/display/FREESWITCH/mod_unimrcp
