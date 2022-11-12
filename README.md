@@ -89,7 +89,7 @@ $ cd ..
 ```
 $ git clone https://github.com/freeswitch/mod_unimrcp.git
 $ cd mod_unimrcp
-$ export PKG_CONFIG_PATH=/usr/local/freeswitch/libs/pkgconfig:/usr/local/unimrcp/libs/pkgconfig
+$ export PKG_CONFIG_PATH=/usr/local/freeswitch/lib/pkgconfig:/usr/local/unimrcp/lib/pkgconfig
 $ ./bootstrap.sh
 $ ./configure
 $ make
