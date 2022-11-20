@@ -78,7 +78,7 @@ $ cd ..
 $ git clone https://github.com/unispeech/unimrcp.git
 $ cd unimrcp
 $ ./bootstrap
-$ ./configure
+$ ./configure --with-sofia-sip=/usr
 $ make
 $ sudo make install
 $ cd ..
