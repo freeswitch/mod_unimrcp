@@ -18,7 +18,7 @@ $ sudo apt-get install \
     libogg-dev libspeex-dev libspeexdsp-dev \
     libldns-dev \
     python3-dev \
-    libavformat-dev libswscale-dev libavresample-dev \
+    libavformat-dev libswscale-dev 'libswresample-dev|libavresample-dev' \
     liblua5.2-dev \
     libopus-dev \
     libpq-dev \
