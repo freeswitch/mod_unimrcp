@@ -1,0 +1,15 @@
+Source: freeswitch-mod-unimrcp
+Section: comm
+Priority: optional
+Maintainer: "SignalWire, Inc." <support@signalwire.com>
+Build-Depends: debhelper (>= 10), libssl-dev, libexpat1-dev, libfreeswitch-dev, libks2, libsofia-sip-ua-dev, libspandsp3-dev, signalwire-client-c2
+Standards-Version: 4.1.0
+
+Package: freeswitch-mod-unimrcp
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Media Resource Control Protocol module
+ This package contains MRCP module for FreeSWITCH.
+ .
+ A FreeSWITCH module that that allows communication
+ with Media Resource Control Protocol (MRCP) servers.

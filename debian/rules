@@ -1,0 +1,9 @@
+#!/usr/bin/make -f
+
+# WARNING: This Makefile will only work via `.github/docker/debian/*/*/*.Dockerfile` Dockerfile.
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	make install DESTDIR=$(CURDIR)/debian/tmp
