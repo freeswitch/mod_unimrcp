@@ -2542,19 +2542,19 @@ static switch_status_t recog_channel_disable_all_grammars(speech_channel_t *scha
  */
 static switch_status_t recog_channel_check_results(speech_channel_t *schannel)
 {
-	switch_status_t status = SWITCH_STATUS_SUCCESS;
+	switch_status_t status = SWITCH_STATUS_BREAK;
 	recognizer_data_t *r;
+
 	switch_mutex_lock(schannel->mutex);
+
 	r = (recognizer_data_t *) schannel->data;
 	if (!zstr(r->result)) {
 		switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_DEBUG, "(%s) SUCCESS, have result\n", schannel->name);
-	} else if (r->start_of_input == START_OF_INPUT_RECEIVED) {
-		switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_DEBUG, "(%s) SUCCESS, start of input\n", schannel->name);
-	} else {
-		status = SWITCH_STATUS_FALSE;
+		status = SWITCH_STATUS_SUCCESS;
 	}
 
 	switch_mutex_unlock(schannel->mutex);
+
 	return status;
 }
 
