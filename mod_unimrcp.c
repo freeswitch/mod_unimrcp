@@ -2551,6 +2551,9 @@ static switch_status_t recog_channel_check_results(speech_channel_t *schannel)
 	if (!zstr(r->result)) {
 		switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_DEBUG, "(%s) SUCCESS, have result\n", schannel->name);
 		status = SWITCH_STATUS_SUCCESS;
+	} else if (schannel->state == SPEECH_CHANNEL_CLOSED || schannel->state == SPEECH_CHANNEL_ERROR) {
+		switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_WARNING, "Closing speech channel due to invalid state [%s]\n", speech_channel_state_to_string(schannel->state));
+		status = SWITCH_STATUS_FALSE;
 	}
 
 	switch_mutex_unlock(schannel->mutex);
@@ -3599,6 +3602,15 @@ static apt_bool_t recog_message_handler(const mrcp_app_message_t *app_message)
 	return mrcp_application_message_dispatch(&globals.recog.dispatcher, app_message);
 }
 
+static apt_bool_t recog_on_terminate_event(mrcp_application_t *application, mrcp_session_t *session, mrcp_channel_t *channel)
+{
+	/* We may get this (terminate) event when the server disconnects. Terminating the session forces closing of
+	 * the speech channel so we can stop recognition in recog_channel_check_results(). */
+	mrcp_application_session_terminate(session);
+
+	return TRUE;
+}
+
 /**
  * Handle the MRCP responses/events
  */
@@ -3807,6 +3819,7 @@ static switch_status_t recog_load(switch_loadable_module_interface_t *module_int
 	globals.recog.dispatcher.on_channel_add = speech_on_channel_add;
 	globals.recog.dispatcher.on_channel_remove = speech_on_channel_remove;
 	globals.recog.dispatcher.on_message_receive = recog_on_message_receive;
+	globals.recog.dispatcher.on_terminate_event = recog_on_terminate_event;
 	globals.recog.audio_stream_vtable.destroy = NULL;
 	globals.recog.audio_stream_vtable.open_rx = recog_stream_open;
 	globals.recog.audio_stream_vtable.close_rx = NULL;
