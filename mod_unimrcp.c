@@ -3666,6 +3666,8 @@ static apt_bool_t recog_on_message_receive(mrcp_application_t *application, mrcp
 				} else {
 					switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_DEBUG, "(%s) timers failed to start, status code = %d\n", schannel->name,
 									  message->start_line.status_code);
+					/* Set ERROR state here to prevent call hang if server disconnects and can't respond to START-INPUT-TIMERS request. */
+					speech_channel_set_state(schannel, SPEECH_CHANNEL_ERROR);
 				}
 			}
 		} else if (message->start_line.method_id == RECOGNIZER_DEFINE_GRAMMAR) {
