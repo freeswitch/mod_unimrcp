@@ -2528,8 +2528,10 @@ static switch_status_t recog_channel_disable_all_grammars(speech_channel_t *scha
 	switch_status_t status = SWITCH_STATUS_SUCCESS;
 
 	recognizer_data_t *r = (recognizer_data_t *) schannel->data;
-	switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_DEBUG, "(%s) Disabling all grammars\n", schannel->name);
-	switch_core_hash_destroy(&r->enabled_grammars);
+	if (r->enabled_grammars) {
+		switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_DEBUG, "(%s) Disabling all grammars\n", schannel->name);
+		switch_core_hash_destroy(&r->enabled_grammars);
+	}
 	switch_core_hash_init(&r->enabled_grammars);
 
 	return status;
@@ -3410,9 +3412,9 @@ static switch_status_t recog_asr_close(switch_asr_handle_t *ah, switch_asr_flag_
 	if (schannel != NULL && !switch_test_flag(ah, SWITCH_ASR_FLAG_CLOSED)) {
 		r = (recognizer_data_t *) schannel->data;
 		speech_channel_stop(schannel);
+		switch_mutex_lock(schannel->mutex);
 		switch_core_hash_destroy(&r->grammars);
 		switch_core_hash_destroy(&r->enabled_grammars);
-		switch_mutex_lock(schannel->mutex);
 		if (r->dtmf_generator) {
 			r->dtmf_generator_active = 0;
 			mpf_dtmf_generator_destroy(r->dtmf_generator);
