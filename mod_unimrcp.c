@@ -2528,11 +2528,15 @@ static switch_status_t recog_channel_disable_all_grammars(speech_channel_t *scha
 	switch_status_t status = SWITCH_STATUS_SUCCESS;
 
 	recognizer_data_t *r = (recognizer_data_t *) schannel->data;
-	if (r->enabled_grammars) {
-		switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_DEBUG, "(%s) Disabling all grammars\n", schannel->name);
-		switch_core_hash_destroy(&r->enabled_grammars);
-	}
+
+	switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_DEBUG, "(%s) Disabling all grammars\n", schannel->name);
+
+	switch_mutex_lock(schannel->mutex);
+
+	switch_core_hash_destroy(&r->enabled_grammars);
 	switch_core_hash_init(&r->enabled_grammars);
+
+	switch_mutex_unlock(schannel->mutex);
 
 	return status;
 }
