@@ -2478,9 +2478,9 @@ static switch_status_t recog_channel_enable_grammar(speech_channel_t *schannel, 
 	if (zstr(grammar_name)) {
 		status = SWITCH_STATUS_FALSE;
 	} else {
-		switch_mutex_lock(schannel->mutex);
 		recognizer_data_t *r = (recognizer_data_t *) schannel->data;
 		grammar_t *grammar;
+		switch_mutex_lock(schannel->mutex);
 		grammar = (grammar_t *) switch_core_hash_find(r->grammars, grammar_name);
 		if (grammar == NULL)
 		{
@@ -2533,10 +2533,8 @@ static switch_status_t recog_channel_disable_all_grammars(speech_channel_t *scha
 	switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_DEBUG, "(%s) Disabling all grammars\n", schannel->name);
 
 	switch_mutex_lock(schannel->mutex);
-
 	switch_core_hash_destroy(&r->enabled_grammars);
 	switch_core_hash_init(&r->enabled_grammars);
-
 	switch_mutex_unlock(schannel->mutex);
 
 	return status;
