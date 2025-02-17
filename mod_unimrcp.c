@@ -2457,8 +2457,11 @@ static switch_status_t recog_channel_unload_grammar(speech_channel_t *schannel, 
 	} else {
 		recognizer_data_t *r = (recognizer_data_t *) schannel->data;
 		switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_DEBUG, "(%s) Unloading grammar %s\n", schannel->name, grammar_name);
+
+		switch_mutex_lock(schannel->mutex);
 		switch_core_hash_delete(r->enabled_grammars, grammar_name);
 		switch_core_hash_delete(r->grammars, grammar_name);
+		switch_mutex_unlock(schannel->mutex);
 	}
 
 	return status;
@@ -2514,7 +2517,10 @@ static switch_status_t recog_channel_disable_grammar(speech_channel_t *schannel,
 	} else {
 		recognizer_data_t *r = (recognizer_data_t *) schannel->data;
 		switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_DEBUG, "(%s) Disabling grammar %s\n", schannel->name, grammar_name);
+
+		switch_mutex_lock(schannel->mutex);
 		switch_core_hash_delete(r->enabled_grammars, grammar_name);
+		switch_mutex_unlock(schannel->mutex);
 	}
 
 	return status;
