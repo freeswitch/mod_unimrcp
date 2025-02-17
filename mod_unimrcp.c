@@ -2480,6 +2480,7 @@ static switch_status_t recog_channel_enable_grammar(speech_channel_t *schannel, 
 	} else {
 		recognizer_data_t *r = (recognizer_data_t *) schannel->data;
 		grammar_t *grammar;
+
 		switch_mutex_lock(schannel->mutex);
 		grammar = (grammar_t *) switch_core_hash_find(r->grammars, grammar_name);
 		if (grammar == NULL)
