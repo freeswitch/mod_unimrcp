@@ -2480,6 +2480,7 @@ static switch_status_t recog_channel_enable_grammar(speech_channel_t *schannel, 
 	} else {
 		recognizer_data_t *r = (recognizer_data_t *) schannel->data;
 		grammar_t *grammar;
+		switch_mutex_lock(schannel->mutex);
 		grammar = (grammar_t *) switch_core_hash_find(r->grammars, grammar_name);
 		if (grammar == NULL)
 		{
@@ -2490,6 +2491,7 @@ static switch_status_t recog_channel_enable_grammar(speech_channel_t *schannel, 
 			switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_DEBUG, "(%s) Enabling grammar %s\n", schannel->name, grammar_name);
 			switch_core_hash_insert(r->enabled_grammars, grammar_name, grammar);
 		}
+		switch_mutex_unlock(schannel->mutex);
 	}
 
 	return status;
