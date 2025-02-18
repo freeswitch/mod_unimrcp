@@ -1,12 +1,12 @@
 ARG BUILDER_IMAGE=arm32v7/debian:bullseye-20240513
 
-FROM --platform=linux/arm32 ${BUILDER_IMAGE} AS builder
+FROM --platform=linux/arm/v7 ${BUILDER_IMAGE} AS builder
 
 ARG MAINTAINER_NAME="Andrey Volk"
 ARG MAINTAINER_EMAIL="andrey@signalwire.com"
 
 ARG CODENAME=bullseye
-ARG ARCH=armhf
+ARG ARCH=arm32
 
 # Credentials
 ARG REPO_DOMAIN=freeswitch.signalwire.com
@@ -57,8 +57,8 @@ RUN echo "export CODENAME=${CODENAME}" | tee ~/.env \
     && chmod +x ~/.env
 
 RUN . ~/.env && cat <<EOF > /etc/apt/sources.list.d/freeswitch.list
-deb [signed-by=${GPG_KEY}] https://${REPO_DOMAIN}/repo/deb/debian-release ${CODENAME} main
-deb-src [signed-by=${GPG_KEY}] https://${REPO_DOMAIN}/repo/deb/debian-release ${CODENAME} main
+deb [signed-by=${GPG_KEY}] https://${REPO_DOMAIN}/repo/deb/rpi/debian-release ${CODENAME} main
+deb-src [signed-by=${GPG_KEY}] https://${REPO_DOMAIN}/repo/deb/rpi/debian-release ${CODENAME} main
 EOF
 
 RUN git config --global --add safe.directory '*' \
@@ -75,7 +75,7 @@ RUN --mount=type=secret,id=REPO_PASSWORD,required=true \
         --fail \
         --netrc-file /etc/apt/auth.conf \
         --output ${GPG_KEY} \
-        https://${REPO_DOMAIN}/repo/deb/debian-release/signalwire-freeswitch-repo.gpg && \
+        https://${REPO_DOMAIN}/repo/deb/rpi/debian-release/signalwire-freeswitch-repo.gpg && \
     file ${GPG_KEY} && \
     apt-get --quiet update && \
     apt-get --yes --quiet install \
