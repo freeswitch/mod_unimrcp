@@ -8,13 +8,52 @@ on:
     paths:
       - "**"
   workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish build data'
+        required: true
+        default: false
+        type: boolean
 
 concurrency:
   group: ${{ github.head_ref || github.ref }}
 
 jobs:
+  get-nonce:
+    name: 'Get Nonce for token'
+    runs-on: freeswitch-org-auth-client
+    outputs:
+      nonce: ${{ steps.get-nonce.outputs.nonce }}
+    steps:
+      - name: Get Nonce
+        id: get-nonce
+        uses: signalwire/actions-template/.github/actions/repo-auth-client@main
+        with:
+          mode: nonce
+
+  issue-token:
+    name: 'Issue temporary token'
+    runs-on: ubuntu-latest
+    needs: get-nonce
+    outputs:
+      token: ${{ steps.issue-token.outputs.token }}
+    steps:
+      - name: Issue Token
+        id: issue-token
+        uses: signalwire/actions-template/.github/actions/repo-auth-client@main
+        env:
+          NONCE: ${{ needs.get-nonce.outputs.nonce }}
+        with:
+          mode: issue
+
   deb-fse:
     name: 'DEB-FSE'
+    if: >-
+      ${{
+        github.event.pull_request.head.repo.full_name == github.repository ||
+        github.actor == github.repository_owner ||
+        github.actor.belongs_to_organization
+      }}
     permissions:
       id-token: write
       contents: read
@@ -46,7 +85,17 @@ jobs:
       PLATFORM: ${{ matrix.platform.name }}
       REPO_DOMAIN: 'fsa.freeswitch.com'
       TARGET_ARTIFACT_NAME: ${{ matrix.os }}-${{ matrix.version }}-${{ matrix.platform.name }}-fse-${{ matrix.release }}-artifact
-      UPLOAD_BUILD_ARTIFACTS: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.title, ':upload-artifacts') }}
+      UPLOAD_BUILD_ARTIFACTS: >-
+        ${{
+          (github.event.pull_request.head.repo.full_name == github.repository) &&
+          (
+            (
+              github.event_name != 'pull_request' &&
+              github.event_name != 'workflow_dispatch'
+            ) ||
+            (github.event_name == 'workflow_dispatch' && inputs.publish)
+          )
+        }}
     secrets:
       GH_BOT_DEPLOY_TOKEN: ${{ secrets.PAT }}
       HOSTNAME: ${{ secrets.HOSTNAME }}
@@ -61,6 +110,8 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    needs:
+      - issue-token
     uses: signalwire/actions-template/.github/workflows/cicd-docker-build-and-distribute.yml@main
     strategy:
       # max-parallel: 1
@@ -74,10 +125,10 @@ jobs:
         platform:
           - name: amd64
             runner: ubuntu-latest
-          # - name: arm32v7
-          #   runner: ubuntu-24.04-arm
-          # - name: arm64v8
-          #   runner: ubuntu-24.04-arm
+          - name: arm32v7
+            runner: ubuntu-24.04-arm
+          - name: arm64v8
+            runner: ubuntu-24.04-arm
         release:
           - release
     with:
@@ -89,7 +140,17 @@ jobs:
       PLATFORM: ${{ matrix.platform.name }}
       REPO_DOMAIN: 'freeswitch.signalwire.com'
       TARGET_ARTIFACT_NAME: ${{ matrix.os }}-${{ matrix.version }}-${{ matrix.platform.name }}-public-${{ matrix.release }}-artifact
-      UPLOAD_BUILD_ARTIFACTS: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.title, ':upload-artifacts') }}
+      UPLOAD_BUILD_ARTIFACTS: >-
+        ${{
+          (github.event.pull_request.head.repo.full_name == github.repository) &&
+          (
+            (
+              github.event_name != 'pull_request' &&
+              github.event_name != 'workflow_dispatch'
+            ) ||
+            (github.event_name == 'workflow_dispatch' && inputs.publish)
+          )
+        }}
     secrets:
       GH_BOT_DEPLOY_TOKEN: ${{ secrets.PAT }}
       HOSTNAME: ${{ secrets.HOSTNAME }}
@@ -97,11 +158,37 @@ jobs:
       USERNAME: ${{ secrets.USERNAME }}
       TELEPORT_TOKEN: ${{ secrets.TELEPORT_TOKEN }}
       REPO_USERNAME: 'signalwire'
-      REPO_PASSWORD: ${{ secrets.REPOTOKEN }}
+      REPO_PASSWORD: ${{ needs.issue-token.outputs.token }}
+
+  revoke-token:
+    name: 'Revoke temporary token'
+    runs-on: ubuntu-latest
+    # if: always()
+    needs:
+      - issue-token
+      - deb-public
+    steps:
+      - name: Revoke Token
+        id: revoke-token
+        uses: signalwire/actions-template/.github/actions/repo-auth-client@main
+        env:
+          TOKEN: ${{ needs.issue-token.outputs.token }}
+        with:
+          mode: revoke
 
   meta:
     name: 'Publish build data to meta-repo'
-    if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.title, ':upload-artifacts') }}
+    if: >-
+      ${{
+        (github.event.pull_request.head.repo.full_name == github.repository) &&
+        (
+          (
+            github.event_name != 'pull_request' &&
+            github.event_name != 'workflow_dispatch'
+          ) ||
+          (github.event_name == 'workflow_dispatch' && inputs.publish)
+        )
+      }}
     needs:
       - deb-fse
       - deb-public
