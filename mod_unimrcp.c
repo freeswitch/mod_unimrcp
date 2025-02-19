@@ -2493,18 +2493,19 @@ static switch_status_t recog_channel_enable_grammar(speech_channel_t *schannel, 
 		switch_mutex_lock(schannel->mutex);
 		if (r->grammars) {
 			grammar = (grammar_t *) switch_core_hash_find(r->grammars, grammar_name);
-			if (grammar == NULL)
-			{
-				switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_ERROR, "(%s) Undefined grammar, %s\n", schannel->name, grammar_name);
-				status = SWITCH_STATUS_FALSE;
-			}
-			else {
-				if (r->enabled_grammars) {
-					switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_DEBUG, "(%s) Enabling grammar %s\n", schannel->name, grammar_name);
-					switch_core_hash_insert(r->enabled_grammars, grammar_name, grammar);
-				}
+		}		
+		if (grammar == NULL)
+		{
+			switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_ERROR, "(%s) Undefined grammar, %s\n", schannel->name, grammar_name);
+			status = SWITCH_STATUS_FALSE;
+		}
+		else {
+			if (r->enabled_grammars) {
+				switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_DEBUG, "(%s) Enabling grammar %s\n", schannel->name, grammar_name);
+				switch_core_hash_insert(r->enabled_grammars, grammar_name, grammar);
 			}
 		}
+	
 		switch_mutex_unlock(schannel->mutex);
 	}
 
