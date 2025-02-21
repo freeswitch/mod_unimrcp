@@ -2571,6 +2571,9 @@ static switch_status_t recog_channel_check_results(speech_channel_t *schannel)
 	if (!zstr(r->result)) {
 		switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_DEBUG, "(%s) SUCCESS, have result\n", schannel->name);
 		status = SWITCH_STATUS_SUCCESS;
+	} else if (r->start_of_input == START_OF_INPUT_RECEIVED) {
+		switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_DEBUG, "(%s) SUCCESS, start of input\n", schannel->name);
+		status = SWITCH_STATUS_SUCCESS;
 	} else if (schannel->state == SPEECH_CHANNEL_CLOSED || schannel->state == SPEECH_CHANNEL_ERROR) {
 		switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_WARNING, "Closing speech channel due to invalid state [%s]\n", speech_channel_state_to_string(schannel->state));
 		status = SWITCH_STATUS_FALSE;
