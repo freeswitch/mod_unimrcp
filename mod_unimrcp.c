@@ -1459,7 +1459,7 @@ static const char *speech_channel_type_to_string(speech_channel_type_t type)
 static switch_status_t speech_channel_set_param(speech_channel_t *schannel, const char *param, const char *val)
 {
 	switch_mutex_lock(schannel->mutex);
-	if (!zstr(param) && val != NULL) {
+	if (!zstr(param) && val != NULL && schannel->params) {
 		/* check if this is a FreeSWITCH param that needs to be translated to an MRCP param: e.g. voice ==> voice-name */
 		const char *v;
 		const char *p = switch_core_hash_find(schannel->application->fs_param_map, param);
