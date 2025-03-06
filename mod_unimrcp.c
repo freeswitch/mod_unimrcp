@@ -4110,6 +4110,8 @@ static int process_mrcpv2_config(mrcp_sofia_client_config_t *config, mrcp_sig_se
 		config->user_agent_name = apr_pstrdup(pool, val);
 	} else if (strcasecmp(param, "sdp-origin") == 0) {
 		config->origin = apr_pstrdup(pool, val);
+	} else if (strcasecmp(param, "sip-trace") == 0) {
+		config->tport_log = switch_true(val);
 	} else {
 		mine = 0;
 	}
