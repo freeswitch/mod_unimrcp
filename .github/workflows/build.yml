@@ -52,7 +52,8 @@ jobs:
       ${{
         github.event.pull_request.head.repo.full_name == github.repository ||
         github.actor == github.repository_owner ||
-        github.actor.belongs_to_organization
+        github.actor.belongs_to_organization ||
+        github.event.pull_request.merged == true
       }}
     permissions:
       id-token: write
