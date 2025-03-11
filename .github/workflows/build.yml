@@ -21,6 +21,15 @@ concurrency:
 jobs:
   get-nonce:
     name: 'Get Nonce for token'
+    if: |
+      (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name != github.repository &&
+        !contains(github.event.pull_request.changed_files, '.github/')
+      ) ||
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name == github.repository ||
+      github.actor == github.repository_owner
     runs-on: freeswitch-org-auth-client
     outputs:
       nonce: ${{ steps.get-nonce.outputs.nonce }}
@@ -50,9 +59,9 @@ jobs:
     name: 'DEB-FSE'
     if: >-
       ${{
+        github.event_name == 'push' ||
         github.event.pull_request.head.repo.full_name == github.repository ||
-        github.actor == github.repository_owner ||
-        github.actor.belongs_to_organization
+        github.actor == github.repository_owner
       }}
     permissions:
       id-token: write
@@ -87,14 +96,8 @@ jobs:
       TARGET_ARTIFACT_NAME: ${{ matrix.os }}-${{ matrix.version }}-${{ matrix.platform.name }}-fse-${{ matrix.release }}-artifact
       UPLOAD_BUILD_ARTIFACTS: >-
         ${{
-          (github.event.pull_request.head.repo.full_name == github.repository) &&
-          (
-            (
-              github.event_name != 'pull_request' &&
-              github.event_name != 'workflow_dispatch'
-            ) ||
-            (github.event_name == 'workflow_dispatch' && inputs.publish)
-          )
+          (github.event_name == 'push') ||
+          (github.event_name == 'workflow_dispatch' && inputs.publish)
         }}
     secrets:
       GH_BOT_DEPLOY_TOKEN: ${{ secrets.PAT }}
@@ -142,14 +145,8 @@ jobs:
       TARGET_ARTIFACT_NAME: ${{ matrix.os }}-${{ matrix.version }}-${{ matrix.platform.name }}-public-${{ matrix.release }}-artifact
       UPLOAD_BUILD_ARTIFACTS: >-
         ${{
-          (github.event.pull_request.head.repo.full_name == github.repository) &&
-          (
-            (
-              github.event_name != 'pull_request' &&
-              github.event_name != 'workflow_dispatch'
-            ) ||
-            (github.event_name == 'workflow_dispatch' && inputs.publish)
-          )
+          (github.event_name == 'push') ||
+          (github.event_name == 'workflow_dispatch' && inputs.publish)
         }}
     secrets:
       GH_BOT_DEPLOY_TOKEN: ${{ secrets.PAT }}
@@ -180,14 +177,8 @@ jobs:
     name: 'Publish build data to meta-repo'
     if: >-
       ${{
-        (github.event.pull_request.head.repo.full_name == github.repository) &&
-        (
-          (
-            github.event_name != 'pull_request' &&
-            github.event_name != 'workflow_dispatch'
-          ) ||
-          (github.event_name == 'workflow_dispatch' && inputs.publish)
-        )
+        github.event_name == 'push' ||
+        (github.event_name == 'workflow_dispatch' && inputs.publish)
       }}
     needs:
       - deb-fse
