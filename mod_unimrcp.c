@@ -393,6 +393,7 @@ static const char *speech_channel_type_to_string(speech_channel_type_t type);
 
 /* synthesis languages */
 #define MIME_TYPE_PLAIN_TEXT "text/plain"
+#define MIME_TYPE_PLAIN_URI "text/uri-list"
 
 static switch_status_t synth_load(switch_loadable_module_interface_t *module_interface, switch_memory_pool_t *pool);
 static switch_status_t synth_shutdown();
@@ -1137,7 +1138,9 @@ static switch_status_t synth_channel_speak(speech_channel_t *schannel, const cha
 	/* good enough way of determining SSML or plain text body */
 	if (text_starts_with(text, XML_ID) || text_starts_with(text, SSML_ID)) {
 		apt_string_assign(&generic_header->content_type, schannel->profile->ssml_mime_type, mrcp_message->pool);
-	} else {
+	} else if (text_starts_with(text, FILE_ID) || text_starts_with(text, HTTP_ID) || text_starts_with(text, HTTPS_ID)){
+        apt_string_assign(&generic_header->content_type, MIME_TYPE_PLAIN_URI, mrcp_message->pool);
+    }else {
 		apt_string_assign(&generic_header->content_type, MIME_TYPE_PLAIN_TEXT, mrcp_message->pool);
 	}
 	mrcp_generic_header_property_add(mrcp_message, GENERIC_HEADER_CONTENT_TYPE);
