@@ -1140,7 +1140,7 @@ static switch_status_t synth_channel_speak(speech_channel_t *schannel, const cha
 		apt_string_assign(&generic_header->content_type, schannel->profile->ssml_mime_type, mrcp_message->pool);
 	} else if (text_starts_with(text, FILE_ID) || text_starts_with(text, HTTP_ID) || text_starts_with(text, HTTPS_ID)){
         apt_string_assign(&generic_header->content_type, MIME_TYPE_PLAIN_URI, mrcp_message->pool);
-    }else {
+    } else {
 		apt_string_assign(&generic_header->content_type, MIME_TYPE_PLAIN_TEXT, mrcp_message->pool);
 	}
 	mrcp_generic_header_property_add(mrcp_message, GENERIC_HEADER_CONTENT_TYPE);
