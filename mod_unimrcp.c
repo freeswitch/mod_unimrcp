@@ -183,9 +183,9 @@ static switch_xml_config_item_t instructions[] = {
 	SWITCH_CONFIG_ITEM_STRING_STRDUP("request-timeout", CONFIG_REQUIRED, &globals.unimrcp_request_timeout, "10000", "",
 									 "Maximum time to wait for server response to a request"),
 	SWITCH_CONFIG_ITEM_STRING_STRDUP("connection-rx-buffer-size", 0, &globals.unimrcp_rx_buffer_size, "1024", "",
-									 "Maximum time to wait for server response to a request"),
+									 "MRCP connection receive buffer size in bytes"),
 	SWITCH_CONFIG_ITEM_STRING_STRDUP("connection-tx-buffer-size", 0, &globals.unimrcp_tx_buffer_size, "1024", "",
-									 "Maximum time to wait for server response to a request"),
+									 "MRCP connection transmit buffer size in bytes"),
 	SWITCH_CONFIG_ITEM_END()
 };
 
