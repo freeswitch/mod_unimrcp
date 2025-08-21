@@ -6,11 +6,6 @@ ARG MAINTAINER_NAME="Andrey Volk"
 ARG MAINTAINER_EMAIL="andrey@signalwire.com"
 
 ARG CODENAME=bullseye
-ARG ARCH=amd64
-
-# Credentials
-ARG REPO_DOMAIN=fsa.freeswitch.com
-ARG REPO_USERNAME=user
 
 ARG BUILD_NUMBER=42
 ARG GIT_SHA=0000000000
@@ -51,29 +46,16 @@ RUN apt-get -q update \
 RUN update-ca-certificates --fresh
 
 RUN echo "export CODENAME=${CODENAME}" | tee ~/.env \
-    && echo "export ARCH=${ARCH}" | tee -a ~/.env \
     && chmod +x ~/.env
-
-RUN . ~/.env && cat <<EOF > /etc/apt/sources.list.d/freeswitch.list
-deb https://${REPO_DOMAIN}/repo/deb/fsa ${CODENAME} 1.8
-deb-src https://${REPO_DOMAIN}/repo/deb/fsa ${CODENAME} 1.8
-EOF
 
 RUN git config --global --add safe.directory '*' \
     && git config --global user.name "${MAINTAINER_NAME}" \
     && git config --global user.email "${MAINTAINER_EMAIL}"
 
 RUN --mount=type=secret,id=REPO_PASSWORD,required=true \
-    printf "machine ${REPO_DOMAIN} "  > /etc/apt/auth.conf && \
-    printf "login ${REPO_USERNAME} " >> /etc/apt/auth.conf && \
-    printf "password "               >> /etc/apt/auth.conf && \
-    cat /run/secrets/REPO_PASSWORD   >> /etc/apt/auth.conf && \
     sha512sum /run/secrets/REPO_PASSWORD && \
-    curl \
-        --fail \
-        --netrc-file /etc/apt/auth.conf \
-        https://${REPO_DOMAIN}/repo/deb/fsa/pubkey.gpg \
-    | apt-key add - && \
+    curl -sSL https://freeswitch.org/fsget | \
+        bash -s $(cat /run/secrets/REPO_PASSWORD) release && \
     apt-get --quiet update && \
     apt-get --yes --quiet install \
         libexpat1-dev \

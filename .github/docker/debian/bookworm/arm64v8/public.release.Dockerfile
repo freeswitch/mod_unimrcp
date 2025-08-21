@@ -6,16 +6,9 @@ ARG MAINTAINER_NAME="Andrey Volk"
 ARG MAINTAINER_EMAIL="andrey@signalwire.com"
 
 ARG CODENAME=bookworm
-ARG ARCH=arm64
-
-# Credentials
-ARG REPO_DOMAIN=freeswitch.signalwire.com
-ARG REPO_USERNAME=user
 
 ARG BUILD_NUMBER=42
 ARG GIT_SHA=0000000000
-
-ARG GPG_KEY="/usr/share/keyrings/signalwire-freeswitch-repo.gpg"
 
 ARG DATA_DIR=/data
 
@@ -53,30 +46,16 @@ RUN apt-get -q update \
 RUN update-ca-certificates --fresh
 
 RUN echo "export CODENAME=${CODENAME}" | tee ~/.env \
-    && echo "export ARCH=${ARCH}" | tee -a ~/.env \
     && chmod +x ~/.env
-
-RUN . ~/.env && cat <<EOF > /etc/apt/sources.list.d/freeswitch.list
-deb [signed-by=${GPG_KEY}] https://${REPO_DOMAIN}/repo/deb/debian-release ${CODENAME} main
-deb-src [signed-by=${GPG_KEY}] https://${REPO_DOMAIN}/repo/deb/debian-release ${CODENAME} main
-EOF
 
 RUN git config --global --add safe.directory '*' \
     && git config --global user.name "${MAINTAINER_NAME}" \
     && git config --global user.email "${MAINTAINER_EMAIL}"
 
 RUN --mount=type=secret,id=REPO_PASSWORD,required=true \
-    printf "machine ${REPO_DOMAIN} "  > /etc/apt/auth.conf && \
-    printf "login ${REPO_USERNAME} " >> /etc/apt/auth.conf && \
-    printf "password "               >> /etc/apt/auth.conf && \
-    cat /run/secrets/REPO_PASSWORD   >> /etc/apt/auth.conf && \
     sha512sum /run/secrets/REPO_PASSWORD && \
-    curl \
-        --fail \
-        --netrc-file /etc/apt/auth.conf \
-        --output ${GPG_KEY} \
-        https://${REPO_DOMAIN}/repo/deb/debian-release/signalwire-freeswitch-repo.gpg && \
-    file ${GPG_KEY} && \
+    curl -sSL https://freeswitch.org/fsget | \
+        bash -s $(cat /run/secrets/REPO_PASSWORD) prerelease && \
     apt-get --quiet update && \
     apt-get --yes --quiet install \
         libexpat1-dev \
@@ -114,6 +93,7 @@ RUN ./bootstrap \
     && ./configure \
         --with-sofia-sip=/usr \
     && make install
+
 COPY . ${DATA_DIR}
 WORKDIR ${DATA_DIR}
 
