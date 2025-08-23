@@ -3,8 +3,9 @@
 ## How to build
 
 1. Build FreeSWITCH and its dependencies
-```
-$ sudo apt-get update 
+
+```sh
+$ sudo apt-get update
 $ sudo apt-get install git
 $ git clone https://github.com/signalwire/freeswitch
 $ git clone https://github.com/signalwire/libks
@@ -57,7 +58,8 @@ $ cd ..
 ```
 
 2. Build UniMRCP dependencies (APR, APR-Utils)
-```
+
+```sh
 $ sudo apt-get install wget tar
 $ wget https://www.unimrcp.org/project/component-view/unimrcp-deps-1-6-0-tar-gz/download -O unimrcp-deps-1.6.0.tar.gz
 $ tar xvzf unimrcp-deps-1.6.0.tar.gz
@@ -66,11 +68,11 @@ $ cd unimrcp-deps-1.6.0
 $ cd libs/apr
 $ ./configure --prefix=/usr/local/apr
 $ make
-$ sudo make install 
+$ sudo make install
 $ cd ..
 
 $ cd apr-util
-$ ./configure --prefix=/usr/local/apr
+$ ./configure --prefix=/usr/local/apr --with-api=/usr/local/apr
 $ make
 $ sudo make install
 $ cd ..
@@ -78,7 +80,7 @@ $ cd ..
 $ git clone https://github.com/unispeech/unimrcp.git
 $ cd unimrcp
 $ ./bootstrap
-$ ./configure
+$ ./configure --with-sofia-sip=/usr
 $ make
 $ sudo make install
 $ cd ..
@@ -86,7 +88,8 @@ $ cd ..
 ```
 
 3. Build mod_unimrcp and install
-```
+
+```sh
 $ git clone https://github.com/freeswitch/mod_unimrcp.git
 $ cd mod_unimrcp
 $ export PKG_CONFIG_PATH=/usr/local/freeswitch/lib/pkgconfig:/usr/local/unimrcp/lib/pkgconfig
