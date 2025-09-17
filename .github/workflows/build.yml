@@ -55,8 +55,8 @@ jobs:
         with:
           mode: issue
 
-  deb-fse:
-    name: "DEB-FSE"
+  deb-fsa:
+    name: "DEB-FSA"
     if: >-
       ${{
         github.event_name == 'push' ||
@@ -89,12 +89,12 @@ jobs:
     with:
       RUNNER: ${{ matrix.platform.runner }}
       ARTIFACTS_PATTERN: '.*\.(deb)$'
-      DOCKERFILE: .github/docker/${{ matrix.os }}/${{ matrix.version }}/${{ matrix.platform.name }}/fse.${{ matrix.release }}.Dockerfile
+      DOCKERFILE: .github/docker/${{ matrix.os }}/${{ matrix.version }}/${{ matrix.platform.name }}/fsa.${{ matrix.release }}.Dockerfile
       MAINTAINER: "Andrey Volk <andrey@signalwire.com>"
-      META_FILE_PATH_PREFIX: /var/www/mod_unimrcp/fse/${{ matrix.release }}/${{ github.ref_name }}/${{ github.run_id }}-${{ github.run_number }}
+      META_FILE_PATH_PREFIX: /var/www/mod_unimrcp/fsa/${{ matrix.release }}/${{ github.ref_name }}/${{ github.run_id }}-${{ github.run_number }}
       PLATFORM: ${{ matrix.platform.name }}
       REPO_DOMAIN: "fsa.freeswitch.com"
-      TARGET_ARTIFACT_NAME: ${{ matrix.os }}-${{ matrix.version }}-${{ matrix.platform.name }}-fse-${{ matrix.release }}-artifact
+      TARGET_ARTIFACT_NAME: ${{ matrix.os }}-${{ matrix.version }}-${{ matrix.platform.name }}-fsa-${{ matrix.release }}-artifact
       UPLOAD_BUILD_ARTIFACTS: >-
         ${{
           (github.event_name == 'push') ||
@@ -183,14 +183,14 @@ jobs:
         (github.event_name == 'workflow_dispatch' && inputs.publish)
       }}
     needs:
-      - deb-fse
+      - deb-fsa
       - deb-public
     permissions:
       id-token: write
       contents: read
     uses: signalwire/actions-template/.github/workflows/meta-repo-content.yml@main
     with:
-      META_CONTENT: "/var/www/mod_unimrcp/{fse,public}/release/${{ github.ref_name }}/${{ github.run_id }}-${{ github.run_number }}"
+      META_CONTENT: "/var/www/mod_unimrcp/{fsa,public}/release/${{ github.ref_name }}/${{ github.run_id }}-${{ github.run_number }}"
       META_REPO: signalwire/bamboo_gha_trigger
       META_REPO_BRANCH: trigger/mod_unimrcp/${{ github.ref_name }}
     secrets:
