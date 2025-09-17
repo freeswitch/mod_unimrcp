@@ -1,6 +1,6 @@
 ARG BUILDER_IMAGE=arm64v8/debian:trixie-20250811
 
-FROM --platform=linux/arm64 ${BUILDER_IMAGE} AS builder
+FROM --platform=${BUILDPLATFORM} ${BUILDER_IMAGE} AS builder
 
 ARG MAINTAINER_NAME="Andrey Volk"
 ARG MAINTAINER_EMAIL="andrey@signalwire.com"
@@ -72,14 +72,14 @@ RUN wget -O - https://www.unimrcp.org/project/component-view/unimrcp-deps-1-6-0-
     | tar xvz -C /root
 
 WORKDIR /root/unimrcp-deps-1.6.0/libs/apr
-RUN CFLAGS="-fPIC" ./configure \
+RUN CFLAGS="-fPIC -Wno-error=implicit-int -Wno-error=implicit-function-declaration" ./configure \
         --disable-shared \
         --enable-static \
         --prefix=/usr/local/apr \
     && make install
 
 WORKDIR /root/unimrcp-deps-1.6.0/libs/apr-util
-RUN CFLAGS="-fPIC" ./configure \
+RUN CFLAGS="-fPIC -Wno-error=implicit-int -Wno-error=implicit-function-declaration" ./configure \
         --prefix=/usr/local/apr \
         --with-apr=/usr/local/apr \
         --with-expat=/usr \
