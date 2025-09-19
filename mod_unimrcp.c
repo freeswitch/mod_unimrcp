@@ -361,6 +361,7 @@ struct speech_channel {
 	/** app specific data */
 	void *data;
 	void *fsh;
+	int counter;
 };
 typedef struct speech_channel speech_channel_t;
 
@@ -749,6 +750,7 @@ static switch_status_t audio_queue_read(audio_queue_t *queue, void *data, switch
 {
 	switch_size_t requested = *data_len;
 	switch_status_t status = SWITCH_STATUS_SUCCESS;
+	switch_size_t timeout = AUDIO_TIMEOUT_USEC;
 #ifdef MOD_UNIMRCP_DEBUG_AUDIO_QUEUE
 	switch_size_t len = *data_len;
 #endif
@@ -763,9 +765,12 @@ static switch_status_t audio_queue_read(audio_queue_t *queue, void *data, switch
 
 	/* wait for data, if allowed */
 	if (block) {
+		if (block > 1) {
+			timeout = (switch_size_t)block * 1000;
+		}
 		while (switch_buffer_inuse(queue->buffer) < requested) {
 			queue->waiting = requested;
-			if (switch_thread_cond_timedwait(queue->cond, queue->mutex, AUDIO_TIMEOUT_USEC) == SWITCH_STATUS_TIMEOUT) {
+			if (switch_thread_cond_timedwait(queue->cond, queue->mutex, timeout) == SWITCH_STATUS_TIMEOUT) {
 				break;
 			}
 		}
@@ -891,7 +896,7 @@ static switch_status_t speech_channel_create(speech_channel_t ** schannel, const
 	schan->rate = rate;
 	schan->silence = 0;			/* L16 silence sample */
 	schan->channel_opened = 0;
-
+	schan->counter = 0;
 	apr_pool_create(&schan->apr_pool, NULL);
 
 	if (switch_mutex_init(&schan->mutex, SWITCH_MUTEX_UNNESTED, pool) != SWITCH_STATUS_SUCCESS ||
@@ -1490,6 +1495,17 @@ static switch_status_t speech_channel_write(speech_channel_t *schannel, void *da
 
 	if (schannel->state == SPEECH_CHANNEL_PROCESSING) {
 		audio_queue_write(schannel->audio_queue, data, len);
+	} 
+	else if ((SPEECH_CHANNEL_SYNTHESIZER == schannel->type) && (schannel->state == SPEECH_CHANNEL_DONE)) {
+		mpf_rtp_settings_t* rtp_settings = NULL;
+		int32_t ptime = 20;
+		int32_t playout_delay = 200;
+		rtp_settings = mrcp_client_rtp_settings_get(globals.mrcp_client, schannel->profile->name);
+		ptime = (rtp_settings && rtp_settings->ptime > 0 && rtp_settings->ptime <= 60) ? rtp_settings->ptime : 20;		
+		playout_delay = (rtp_settings && rtp_settings->jb_config.initial_playout_delay <= 5000) ? rtp_settings->jb_config.initial_playout_delay : 200;
+		if (schannel->counter++ < playout_delay/ptime) {
+			audio_queue_write(schannel->audio_queue, data, len);
+		}
 	}
 
 	return SWITCH_STATUS_SUCCESS;
@@ -1507,6 +1523,7 @@ static switch_status_t speech_channel_write(speech_channel_t *schannel, void *da
 static switch_status_t speech_channel_read(speech_channel_t *schannel, void *data, switch_size_t *len, int block)
 {
 	switch_status_t status = SWITCH_STATUS_SUCCESS;
+	mpf_rtp_settings_t* rtp_settings = NULL;
 
 	if (!schannel || !schannel->mutex || !schannel->audio_queue) {
 		return SWITCH_STATUS_FALSE;
@@ -1515,7 +1532,11 @@ static switch_status_t speech_channel_read(speech_channel_t *schannel, void *dat
 	switch (schannel->state) {
 	case SPEECH_CHANNEL_DONE:
 		/* pull any remaining audio - never blocking */
-		if (audio_queue_read(schannel->audio_queue, data, len, 0) == SWITCH_STATUS_FALSE) {
+		if (SPEECH_CHANNEL_SYNTHESIZER == schannel->type) {
+			rtp_settings = mrcp_client_rtp_settings_get(globals.mrcp_client, schannel->profile->name);
+			block = rtp_settings ? rtp_settings->jb_config.initial_playout_delay : 0;
+		}		
+		if (audio_queue_read(schannel->audio_queue, data, len, block) == SWITCH_STATUS_FALSE) {
 			/* all frames read */
 			status = SWITCH_STATUS_BREAK;
 		}
@@ -1589,6 +1610,9 @@ static switch_status_t speech_channel_set_state_unlocked(speech_channel_t *schan
 	switch_log_printf(SWITCH_CHANNEL_UUID_LOG(schannel->session_uuid), SWITCH_LOG_DEBUG, "(%s) %s ==> %s\n", schannel->name, speech_channel_state_to_string(schannel->state),
 					  speech_channel_state_to_string(state));
 	schannel->state = state;
+    if (state == SPEECH_CHANNEL_PROCESSING) {
+        schannel->counter = 0;
+    }
 	switch_thread_cond_signal(schannel->cond);
 	return SWITCH_STATUS_SUCCESS;
 }
@@ -1734,8 +1758,9 @@ static switch_status_t synth_speech_read_tts(switch_speech_handle_t *sh, void *d
 	switch_status_t status = SWITCH_STATUS_SUCCESS;
 	switch_size_t bytes_read;
 	speech_channel_t *schannel = (speech_channel_t *) sh->private_info;
+	int block = (*flags & SWITCH_SPEECH_FLAG_BLOCKING) ? 1 : 0;
 	bytes_read = *datalen;
-	if (speech_channel_read(schannel, data, &bytes_read, (*flags & SWITCH_SPEECH_FLAG_BLOCKING)) == SWITCH_STATUS_SUCCESS) {
+	if (speech_channel_read(schannel, data, &bytes_read, block) == SWITCH_STATUS_SUCCESS) {
 		/* pad data, if not enough read */
 		if (bytes_read < *datalen) {
 #ifdef MOD_UNIMRCP_DEBUG_AUDIO_QUEUE
